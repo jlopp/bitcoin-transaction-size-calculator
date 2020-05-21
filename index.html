@@ -65,25 +65,53 @@
       }
 
       function processForm() {
-        var input_count = document.getElementById('input_count').value;
+        // Validate transaction input attributes
+        var input_count = parseInt(document.getElementById('input_count').value);
         if (!Number.isInteger(input_count) || input_count < 0) {
-          alert('expecting positive input count');
+          alert('expecting positive input count, got: ' + input_count);
           return;
         }
         var input_script = document.getElementById('input_script').value;
-        var output_count = document.getElementById('output_count').value;
-        if (!Number.isInteger(output_count) || output_count < 0) {
-          alert('expecting positive output count');
-          return;
-        }
-        var input_m = document.getElementById('input_m').value;
+        var input_m = parseInt(document.getElementById('input_m').value);
         if (!Number.isInteger(input_m) || input_m < 0) {
           alert('expecting positive signature count');
           return;
         }
-        var input_n = document.getElementById('input_n').value;
+        var input_n = parseInt(document.getElementById('input_n').value);
         if (!Number.isInteger(input_n) || input_n < 0) {
           alert('expecting positive pubkey count');
+          return;
+        }
+
+        // Validate transaction output attributes
+        var p2pkh_output_count = parseInt(document.getElementById('p2pkh_output_count').value);
+        if (!Number.isInteger(p2pkh_output_count) || p2pkh_output_count < 0) {
+          alert('expecting positive p2pkh output count');
+          return;
+        }
+        var p2sh_output_count = parseInt(document.getElementById('p2sh_output_count').value);
+        if (!Number.isInteger(p2sh_output_count) || p2sh_output_count < 0) {
+          alert('expecting positive p2sh output count');
+          return;
+        }
+        var p2sh_p2wpkh_output_count = parseInt(document.getElementById('p2sh_p2wpkh_output_count').value);
+        if (!Number.isInteger(p2sh_p2wpkh_output_count) || p2sh_p2wpkh_output_count < 0) {
+          alert('expecting positive p2sh-p2wpkh output count');
+          return;
+        }
+        var p2sh_p2wsh_output_count = parseInt(document.getElementById('p2sh_p2wsh_output_count').value);
+        if (!Number.isInteger(p2sh_p2wsh_output_count) || p2sh_p2wsh_output_count < 0) {
+          alert('expecting positive p2sh-p2wsh output count');
+          return;
+        }
+        var p2wsh_output_count = parseInt(document.getElementById('p2wsh_output_count').value);
+        if (!Number.isInteger(p2wsh_output_count) || p2wsh_output_count < 0) {
+          alert('expecting positive p2wsh output count');
+          return;
+        }
+        var p2tr_output_count = parseInt(document.getElementById('p2tr_output_count').value);
+        if (!Number.isInteger(p2tr_output_count) || p2tr_output_count < 0) {
+          alert('expecting positive p2tr output count');
           return;
         }
 
@@ -96,7 +124,7 @@
 
         // In most cases the input size is predictable. For P2SH, P2SH-P2WSH, and P2WSH inputs we need to perform a detailed calculation
         var inputSize = 0;
-        switch (output_script) {
+        switch (input_script) {
           case "P2PKH":
             inputSize = P2PKH_IN_SIZE;
             break;
@@ -114,16 +142,14 @@
             inputSize = 32 + 4 + getSizeOfVarInt(scriptSigSize) + scriptSigSize + 4;
         }
 
-        var outputSize = document.getElementById('p2pkh_output_count').value * P2PKH_OUT_SIZE +
-                          document.getElementById('p2sh_output_count').value * P2SH_OUT_SIZE +
-                          document.getElementById('p2sh_p2wpkh_output_count').value * P2SH_P2WPKH_OUT_SIZE +
-                          document.getElementById('p2sh_p2wsh_output_count').value * P2SH_P2WSH_OUT_SIZE +
-                          document.getElementById('p22sh_output_count').value * P2WSH_OUT_SIZE +
-                          document.getElementById('p2tr_output_count').value * P2TR_OUT_SIZE;
-
         var txSize = txOverheadSize +
                     inputSize * input_count +
-                    outputSize * output_count;
+                    P2PKH_OUT_SIZE * p2pkh_output_count +
+                    P2SH_OUT_SIZE * p2sh_output_count +
+                    P2SH_P2WPKH_OUT_SIZE * p2sh_p2wpkh_output_count +
+                    P2SH_P2WSH_OUT_SIZE * p2sh_p2wsh_output_count +
+                    P2WSH_OUT_SIZE * p2wsh_output_count +
+                    P2TR_OUT_SIZE * p2tr_output_count;
 
         document.getElementById('txBytes').innerHTML = txSize;
         document.getElementById('txWeight').innerHTML = txSize;
@@ -150,7 +176,7 @@
               <div class="form-inline">
                 <div class="input-group-inline">
                   <span>What are the attributes of the bitcoin transaction?</span><br/>
-                  Number of inputs: <input type="text" id="input_count" class="format form-control" value="1" />
+                  Number of inputs: <input type="number" id="input_count" class="format form-control" value="1" />
                   <br/><br/><br/>
                   Input script type: <select id="input_script" class="format form-control">
                     <option value="P2PKH" selected>P2PKH</option>
@@ -162,15 +188,15 @@
                     <option value="P2TR">P2TR</option>
                   </select>
                   <br/><br/><br/>
-                  Number of signatures per input: <input type="text" id="input_m" class="format form-control" value="1" /><br/>
-                  Number of pubkeys per input: <input type="text" id="input_n" class="format form-control" value="1" /><br/>
-                  Number of P2PKH outputs: <input type="text" id="p2pkh_output_count" class="format form-control" value="0" /><br/>
-                  Number of P2SH outputs: <input type="text" id="p2sh_output_count" class="format form-control" value="0" /><br/>
-                  Number of P2WPKH in P2SH outputs: <input type="text" id="p2sh_p2wpkh_output_count" class="format form-control" value="0" /><br/>
-                  Number of P2WSH in P2SH outputs: <input type="text" id="p2sh_p2wsh_output_count" class="format form-control" value="0" /><br/>
-                  Number of P2WPKH outputs: <input type="text" id="p2wpkh_output_count" class="format form-control" value="0" /><br/>
-                  Number of P2WSH outputs: <input type="text" id="p2wsh_output_count" class="format form-control" value="0" /><br/>
-                  Number of P2TR outputs: <input type="text" id="p2tr_output_count" class="format form-control" value="0" /><br/>
+                  Number of signatures per input: <input type="number" id="input_m" class="format form-control" value="1" /><br/>
+                  Number of pubkeys per input: <input type="number" id="input_n" class="format form-control" value="1" /><br/>
+                  Number of P2PKH outputs: <input type="number" id="p2pkh_output_count" class="format form-control" value="0" /><br/>
+                  Number of P2SH outputs: <input type="number" id="p2sh_output_count" class="format form-control" value="0" /><br/>
+                  Number of P2WPKH in P2SH outputs: <input type="number" id="p2sh_p2wpkh_output_count" class="format form-control" value="0" /><br/>
+                  Number of P2WSH in P2SH outputs: <input type="number" id="p2sh_p2wsh_output_count" class="format form-control" value="0" /><br/>
+                  Number of P2WPKH outputs: <input type="number" id="p2wpkh_output_count" class="format form-control" value="0" /><br/>
+                  Number of P2WSH outputs: <input type="number" id="p2wsh_output_count" class="format form-control" value="0" /><br/>
+                  Number of P2TR outputs: <input type="number" id="p2tr_output_count" class="format form-control" value="0" /><br/>
                   <button class="btn" onclick="processForm();return false;">Calculate</button><br/><br/><br/>
                   Transaction size in bytes: <div id="txBytes"></div><br/>
                   Transaction size in weight units: <div id="txWeight"></div><br/>
