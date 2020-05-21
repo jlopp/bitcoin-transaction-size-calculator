@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Bitcoin Transaction Size Calculator</title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script>
+      const TX_OVERHEAD_SIZE = 10;
+      const TX_SEGWIT_OVERHEAD_SIZE = 11;
+
+      const P2PKH_IN_SIZE = 148;
+      const P2PKH_OUT_SIZE = 34;
+
+      const P2SH_OUT_SIZE = P2SH_P2WPKH_OUT_SIZE = P2SH_P2WSH_OUT_SIZE = 32;
+
+      const P2SH_P2WPKH_IN_SIZE = 91;
+
+      const P2WPKH_IN_SIZE = 68;
+      const P2WPKH_OUT_SIZE = 31;
+
+      const P2WSH_OUT_SIZE = 43;
+
+      const P2TR_IN_SIZE = 58;
+      const P2TR_OUT_SIZE = 43;
+
+      const PUBKEY_SIZE = 33;
+      const SIGNATURE_SIZE = 72;
+
+      function getSizeOfScriptLengthElement(length) {
+        if (length < 75) {
+          return 1;
+        } else if (length <= 0xff) {
+          return 2;
+        } else if (length <= 0xffff) {
+          return 3;
+        } else if (length <= 0xffffffff) {
+          return 5;
+        } else {
+          alert('Size of redeem script is too large');
+        }
+      }
+
+      function getSizeOfVarInt(length) {
+        if (length < 253) {
+          return 1;
+        } else if (length < 65535) {
+          return 3;
+        } else if (length < 4294967295) {
+          return 5;
+        } else if (length < 18446744073709551615) {
+          return 9;
+        } else {
+          alert("Invalid decimal");
+        }
+      }
+
+      function processForm() {
+        var input_count = document.getElementById('input_count').value;
+        if (!Number.isInteger(input_count) || input_count < 0) {
+          alert('expecting positive input count');
+          return;
+        }
+        var input_script = document.getElementById('input_script').value;
+        var output_count = document.getElementById('output_count').value;
+        if (!Number.isInteger(output_count) || output_count < 0) {
+          alert('expecting positive output count');
+          return;
+        }
+        var input_m = document.getElementById('input_m').value;
+        if (!Number.isInteger(input_m) || input_m < 0) {
+          alert('expecting positive signature count');
+          return;
+        }
+        var input_n = document.getElementById('input_n').value;
+        if (!Number.isInteger(input_n) || input_n < 0) {
+          alert('expecting positive pubkey count');
+          return;
+        }
+
+        var redeemScriptSize = 1 + n*(1 + PUBKEY_SIZE) + 1 + 1;
+        // 2-of-3: SizeOfRedeemScript = 1+3*(1+33)+1+1 = 105
+
+        var scriptSigSize = 1 + m*(1+SIGNATURE_SIZE) + SizeOfPushDataFor(RedeemScript) + redeemScriptSize;
+
+        // 2-of-3: SizeOfScriptSig = 1+2*(1+72)+2+105 = 1 + 146 + 2 + 105 = 254
+        var inputSize = 32 + 4 + SizeOfCsuintFor(SizeOfScriptSig) + SizeOfScriptSig + 4;
+        var outputSize = ;
+
+        var txSize = VirtualSizes.txP2shInputSize * params.nP2shInputs +
+        VirtualSizes.txP2shP2wshInputSize * (params.nP2shP2wshInputs || 0) +
+        VirtualSizes.txP2pkhInputSizeUncompressedKey * (params.nP2pkhInputs || 0) +
+        VirtualSizes.txP2pkhOutputSize * params.nOutputs +
+        // if the tx contains at least one segwit input, the tx overhead is increased by 1
+        VirtualSizes.txOverheadSize + (params.nP2shP2wshInputs > 0 ? 1 : 0);
+
+        var txBytes = document.getElementById('xpub').value;
+
+        document.getElementById('txBytes').innerHTML = txSize;
+      }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+    <h1 class="text-center">Bitcoin Transaction Size Calculator</h1>
+    <hr/>
+    <div class="row">
+      <div class="col-md-12">
+        <form class="form-horizontal" role="form" action="javascript:void(0);">
+          <div class="form-group">
+            <div class="col-sm-2">
+            </div>
+            <div class="col-sm-10">
+              <p>This calculator will give you the upper bound of the size of a transaction with specific characteristics. The size could be a few bytes smaller due to signature randomness, but it's unpredictable and you should err on the side of caution to avoid creating transactions that don't get relayed due to paying fees below the standard minimum rate.</p>
+            </div>
+          </div>
+          <div class="form-group generate-container">
+            <label class="col-sm-2 control-label"></label>
+            <div class="col-sm-10">
+              <div class="form-inline">
+                <div class="input-group-inline">
+                  <span>What are the attributes of the bitcoin transaction?</span><br/>
+                  Number of inputs: <text id="input_count" class="format form-control">1</text>
+                  <br/><br/><br/>
+                  Input script type: <select id="input_script" class="format form-control">
+                    <option value="P2PKH" selected>P2PKH</option>
+                    <option value="P2SH">P2SH</option>
+                    <option value="P2SH-P2WPKH">P2WPKH in P2SH</option>
+                    <option value="P2SH-P2WSH">P2WSH in P2SH</option>
+                    <option value="P2WPKH">P2WPKH</option>
+                    <option value="P2WSH">P2WSH</option>
+                    <option value="P2WSH">P2TR</option>
+                  </select>
+                  <br/><br/><br/>
+                  Number of signatures per input: <text id="input_m" class="format form-control">1</text><br/>
+                  Number of pubkeys per input: <text id="input_n" class="format form-control">1</text><br/>
+                  Number of P2PKH outputs: <text id="p2pkh_output_count" class="format form-control">0</text><br/>
+                  Number of P2SH outputs: <text id="p2sh_output_count" class="format form-control">0</text><br/>
+                  Number of P2WPKH in P2SH outputs: <text id="p2wpkh_p2sh_output_count" class="format form-control">0</text><br/>
+                  Number of P2WSH in P2SH outputs: <text id="p2wsh_p2sh_output_count" class="format form-control">0</text><br/>
+                  Number of P2WPKH outputs: <text id="p2wpkh_output_count" class="format form-control">0</text><br/>
+                  Number of P2WSH outputs: <text id="p2wsh_output_count" class="format form-control">0</text><br/>
+                  Number of P2TR outputs: <text id="p2tr_output_count" class="format form-control">0</text><br/>
+                  <button class="btn" onclick="processForm();return false;">Calculate</button><br/><br/><br/>
+                  Transaction size in bytes: <div id="txBytes"></div><br/>
+                  Transaction size in weight units: <div id="txWeight"></div><br/>
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr/>
+          <div class="form-group">
+            <div class="col-sm-2">
+            </div>
+            <div class="col-sm-10">
+              <h2>This tool is 100% open source code</h2>
+              <p>
+                <span>The Bitcoin Extended Public Key Converter repository can be found at </span>
+                <a href="https://github.com/jlopp/xpub-converter" target="_blank">
+                https://github.com/jlopp/xpub-converter
+                </a>
+              </p>
+              <h3>Libraries</h3>
+              <p>
+                <span>bs58check: </span>
+                <a href="https://github.com/bitcoinjs/bs58check" target="_blank">
+                https://github.com/bitcoinjs/bs58check
+                </a>
+              </p>
+              <p>
+                <span>Twitter Bootstrap: </span>
+                <a href="http://getbootstrap.com/" target="_blank">
+                http://getbootstrap.com/
+                </a>
+              </p>
+            </div>
+        </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
