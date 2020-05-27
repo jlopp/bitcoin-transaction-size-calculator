@@ -130,37 +130,51 @@
           alert('expecting positive p2tr output count');
           return;
         }
+
         const output_count = p2pkh_output_count + p2sh_output_count + p2sh_p2wpkh_output_count
                             + p2sh_p2wsh_output_count + p2wpkh_output_count + p2wsh_output_count + p2tr_output_count;
 
         // In most cases the input size is predictable. For multisig inputs we need to perform a detailed calculation
-        var inputSize = 0;
-        var witnessSize = 0;
+        var inputSize = 0; // in virtual bytes
+        var inputWitnessSize = 0;
         switch (input_script) {
           case "P2PKH":
             inputSize = P2PKH_IN_SIZE;
             break;
           case "P2SH-P2WPKH":
             inputSize = P2SH_P2WPKH_IN_SIZE;
+            inputWitnessSize = 107; // size(signature) + signature + size(pubkey) + pubkey
             break;
           case "P2WPKH":
             inputSize = P2WPKH_IN_SIZE;
-            witnessSize = 107;
+            inputWitnessSize = 107; // size(signature) + signature + size(pubkey) + pubkey
             break;
           case "P2TR": // Only consider the cooperative taproot signing path; assume multisig is done via aggregate signatures
             inputSize = P2TR_IN_SIZE;
-            witnessSize = 65;
+            inputWitnessSize = 65; // getSizeOfVarInt(schnorrSignature) + schnorrSignature;
             break;
           case "P2SH":
-            var redeemScriptSize = 1 + input_n*(1 + PUBKEY_SIZE) + 1 + 1;
-            var scriptSigSize = 1 + input_m * (1 + SIGNATURE_SIZE) + getSizeOfScriptLengthElement(redeemScriptSize) + redeemScriptSize;
+            var redeemScriptSize = 1 + // OP_M
+                                  input_n*(1 + PUBKEY_SIZE) + // OP_PUSH33 <pubkey>
+                                  1 + // OP_N
+                                  1; // OP_CHECKMULTISIG
+            var scriptSigSize = 1 + // size(0)
+                              input_m * (1 + SIGNATURE_SIZE) + // size(SIGNATURE_SIZE) + signature
+                              getSizeOfScriptLengthElement(redeemScriptSize) + redeemScriptSize;
             inputSize = 32 + 4 + getSizeOfVarInt(scriptSigSize) + scriptSigSize + 4;
             break;
           case "P2SH-P2WSH":
           case "P2WSH":
-            var redeemScriptSize = 1 + input_n*(1 + PUBKEY_SIZE) + 1 + 1;
-            var witnessSize = 1 + input_m * (1 + SIGNATURE_SIZE) + getSizeOfScriptLengthElement(redeemScriptSize) + redeemScriptSize;
-            inputSize = 32 + 4 + 63.25 + 4 + 1; // TODO figure this out
+            var redeemScriptSize = 1 + // OP_M
+                                  input_n*(1 + PUBKEY_SIZE) + // OP_PUSH33 <pubkey>
+                                  1 + // OP_N
+                                  1; // OP_CHECKMULTISIG
+            inputWitnessSize = 1 + // size(0)
+                              input_m * (1 + SIGNATURE_SIZE) + // size(SIGNATURE_SIZE) + signature
+                              getSizeOfScriptLengthElement(redeemScriptSize) + redeemScriptSize;
+            inputSize = 36 + // outpoint (spent UTXO ID)
+                        inputWitnessSize / 4 + // witness program
+                        4;  // nSequence
         }
       
         var txVBytes = getTxOverheadSize(input_script, input_count, output_count) +
@@ -173,21 +187,8 @@
                     P2WSH_OUT_SIZE * p2wsh_output_count +
                     P2TR_OUT_SIZE * p2tr_output_count;
 
-        // calculate weight
-        switch (input_script) {
-          case "P2PKH":
-          case "P2SH":
-            var txBytes = txVBytes;
-            var txWeight = txVBytes * 4;
-            break;
-          case "P2SH-P2WSH":
-          case "P2WSH":
-          case "P2SH-P2WPKH":
-          case "P2WPKH":
-          case "P2TR":
-            var txBytes = txVBytes + witnessSize;
-            var txWeight = (txVBytes * 3) + witnessSize;
-        }
+        var txBytes = txVBytes + inputWitnessSize * input_count;
+        var txWeight = txVBytes * 4;
 
         document.getElementById('txBytes').innerHTML = txBytes;
         document.getElementById('txVBytes').innerHTML = txVBytes;
