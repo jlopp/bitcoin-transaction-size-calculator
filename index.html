@@ -79,14 +79,14 @@
 
       function getTxOverheadExtraRawBytes(input_script, input_count) {
         if (input_script == "P2PKH" || input_script == "P2SH") {
-          var witness_vbytes = 0;
+          var witness_bytes = 0;
         } else { // Transactions with segwit inputs have extra overhead
-          var witness_vbytes = 0.25                             // segwit marker
-                            + 0.25                              // segwit flag
-                            + getSizeOfVarInt(input_count) / 4; // witness element count
+          var witness_bytes = 1                                 // segwit marker
+                            + 1                                 // segwit flag
+                            + getSizeOfVarInt(input_count);     // witness element count
         }
 
-        return witness_vbytes * 3;
+        return witness_bytes;
       }
 
       function processForm() {
@@ -204,7 +204,7 @@
                     P2WSH_OUT_SIZE * p2wsh_output_count +
                     P2TR_OUT_SIZE * p2tr_output_count;
 
-        var txBytes = getTxOverheadExtraRawBytes(input_script, input_count) + txVBytes + inputWitnessSize * input_count;
+        var txBytes = getTxOverheadExtraRawBytes(input_script, input_count) + txVBytes + (inputWitnessSize * input_count) * 3 / 4;
         var txWeight = txVBytes * 4;
 
         document.getElementById('txBytes').innerHTML = txBytes;
