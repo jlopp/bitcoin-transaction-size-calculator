@@ -20,7 +20,7 @@
       
       const P2SH_OUT_SIZE = P2SH_P2WPKH_OUT_SIZE = P2SH_P2WSH_OUT_SIZE = 32;
       
-      <!-- All segwit input sizes are reduced by 1 WU to account for the witness item counts being added for every input per the transaction header -->
+      // All segwit input sizes are reduced by 1 WU to account for the witness item counts being added for every input per the transaction header
       const P2SH_P2WPKH_IN_SIZE = 90.75;
       
       const P2WPKH_IN_SIZE = 67.75;
@@ -65,9 +65,9 @@
         if (input_script == "P2PKH" || input_script == "P2SH") {
           var witness_vbytes = 0;
         } else { // Transactions with segwit inputs have extra overhead
-          var witness_vbytes = 0.25                             // segwit marker
-                            + 0.25                              // segwit flag
-                            + getSizeOfVarInt(input_count) / 4; // witness element count
+          var witness_vbytes = 0.25                 // segwit marker
+                            + 0.25                  // segwit flag
+                            + input_count / 4;      // witness element count per input
         }
 
         return 4 // nVersion
@@ -78,15 +78,16 @@
       }
 
       function getTxOverheadExtraRawBytes(input_script, input_count) {
+        // Returns the remaining 3/4 bytes per witness bytes
         if (input_script == "P2PKH" || input_script == "P2SH") {
           var witness_bytes = 0;
         } else { // Transactions with segwit inputs have extra overhead
-          var witness_bytes = 1                                 // segwit marker
-                            + 1                                 // segwit flag
-                            + getSizeOfVarInt(input_count);     // witness element count
+          var witness_bytes = 0.25             // segwit marker
+                           + 0.25              // segwit flag
+                           + input_count / 4;  // witness element count per input
         }
 
-        return witness_bytes;
+        return witness_bytes * 3;
       }
 
       function processForm() {
