@@ -208,6 +208,7 @@
         var txBytes = getTxOverheadExtraRawBytes(input_script, input_count) + txVBytes + (inputWitnessSize * input_count) * 3 / 4;
         var txWeight = txVBytes * 4;
 
+        txVBytes = Math.ceil(txVBytes);
         document.getElementById('txBytes').innerHTML = txBytes;
         document.getElementById('txVBytes').innerHTML = txVBytes;
         document.getElementById('txWeight').innerHTML = txWeight;
