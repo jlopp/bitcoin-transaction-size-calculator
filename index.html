@@ -61,7 +61,7 @@
         }
       }
 
-      function getTxOverheadVBytes(input_script, input_count, output_count) {
+      function getWitnessVbytes(input_script, input_count) {
         if (input_script == "P2PKH" || input_script == "P2SH") {
           var witness_vbytes = 0;
         } else { // Transactions with segwit inputs have extra overhead
@@ -70,24 +70,20 @@
                             + input_count / 4;      // witness element count per input
         }
 
+        return witness_vbytes;
+      }
+
+      function getTxOverheadVBytes(input_script, input_count, output_count) {
         return 4 // nVersion
               + getSizeOfVarInt(input_count) // number of inputs
               + getSizeOfVarInt(output_count) // number of outputs
               + 4 // nLockTime
-              + witness_vbytes;
+              + getWitnessVbytes(input_script, input_count);
       }
 
       function getTxOverheadExtraRawBytes(input_script, input_count) {
         // Returns the remaining 3/4 bytes per witness bytes
-        if (input_script == "P2PKH" || input_script == "P2SH") {
-          var witness_bytes = 0;
-        } else { // Transactions with segwit inputs have extra overhead
-          var witness_bytes = 0.25             // segwit marker
-                           + 0.25              // segwit flag
-                           + input_count / 4;  // witness element count per input
-        }
-
-        return witness_bytes * 3;
+        return getWitnessVbytes(input_script, input_count) * 3;
       }
 
       function processForm() {
