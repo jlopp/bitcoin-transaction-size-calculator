@@ -86,6 +86,19 @@
         return getWitnessVbytes(input_script, input_count) * 3;
       }
 
+      function getRedeemScriptSize(input_n) {
+        return  1 + // OP_M
+                input_n*(1 + PUBKEY_SIZE) + // OP_PUSH33 <pubkey>
+                1 + // OP_N
+                1; // OP_CHECKMULTISIG
+      }
+
+      function getScriptSignatureSize(input_m, redeemScriptSize) {
+        return  1 + // size(0)
+                input_m * (1 + SIGNATURE_SIZE) + // size(SIGNATURE_SIZE) + signature
+                getSizeOfScriptLengthElement(redeemScriptSize) + redeemScriptSize;
+      }
+
       function processForm() {
         // Validate transaction input attributes
         var input_count = parseInt(document.getElementById('input_count').value);
@@ -165,24 +178,14 @@
             inputWitnessSize = 65; // getSizeOfVarInt(schnorrSignature) + schnorrSignature;
             break;
           case "P2SH":
-            var redeemScriptSize = 1 + // OP_M
-                                  input_n*(1 + PUBKEY_SIZE) + // OP_PUSH33 <pubkey>
-                                  1 + // OP_N
-                                  1; // OP_CHECKMULTISIG
-            var scriptSigSize = 1 + // size(0)
-                              input_m * (1 + SIGNATURE_SIZE) + // size(SIGNATURE_SIZE) + signature
-                              getSizeOfScriptLengthElement(redeemScriptSize) + redeemScriptSize;
+            var redeemScriptSize = getRedeemScriptSize(input_n);
+            var scriptSigSize = getScriptSignatureSize(input_m, redeemScriptSize);
             inputSize = 32 + 4 + getSizeOfVarInt(scriptSigSize) + scriptSigSize + 4;
             break;
           case "P2SH-P2WSH":
           case "P2WSH":
-            var redeemScriptSize = 1 + // OP_M
-                                  input_n*(1 + PUBKEY_SIZE) + // OP_PUSH33 <pubkey>
-                                  1 + // OP_N
-                                  1; // OP_CHECKMULTISIG
-            inputWitnessSize = 1 + // size(0)
-                              input_m * (1 + SIGNATURE_SIZE) + // size(SIGNATURE_SIZE) + signature
-                              getSizeOfScriptLengthElement(redeemScriptSize) + redeemScriptSize;
+            var redeemScriptSize = getRedeemScriptSize(input_n);
+            inputWitnessSize = getScriptSignatureSize(input_m, redeemScriptSize);
             inputSize = 36 + // outpoint (spent UTXO ID)
                         inputWitnessSize / 4 + // witness program
                         4;  // nSequence
