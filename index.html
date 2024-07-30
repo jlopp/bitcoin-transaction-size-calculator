@@ -32,15 +32,26 @@
       
       const PUBKEY_SIZE = 33;
       const SIGNATURE_SIZE = 72;
-      
+
+      const INPUT_TXID_SIZE = 32;
+      const INPUT_VOUT_SIZE = INPUT_SEQUENCE_SIZE = SEGWIT_INPUT_DISCOUNT = HEADER_VERSION_SIZE = HEADER_LOCKTIME_SIZE =  4;
+
+      const ONE_BYTE_MAX_SIZE = 0xFF;
+      const TWO_BYTE_MAX_SIZE = 0xFFFF;
+      const FOUR_BYTE_MAX_SIZE = 0xFFFFFFFF;
+
+      const P2WPKH_INPUT_WITNESS_SIZE = 107; // size(signature) + signature + size(pubkey) + pubkey
+
+      const P2TR_INPUT_WITNESS_SIZE = 65; // getSizeOfVarInt(schnorrSignature) + schnorrSignature;
+
       function getSizeOfScriptLengthElement(length) {
         if (length < 75) {
           return 1;
-        } else if (length <= 255) {
+        } else if (length <= ONE_BYTE_MAX_SIZE) {
           return 2;
-        } else if (length <= 65535) {
+        } else if (length <= TWO_BYTE_MAX_SIZE) {
           return 3;
-        } else if (length <= 4294967295) {
+        } else if (length <= FOUR_BYTE_MAX_SIZE) {
           return 5;
         } else {
           alert('Size of redeem script is too large');
@@ -50,9 +61,9 @@
       function getSizeOfVarInt(length) {
         if (length < 253) {
           return 1;
-        } else if (length < 65535) {
+        } else if (length < TWO_BYTE_MAX_SIZE) {
           return 3;
-        } else if (length < 4294967295) {
+        } else if (length < FOUR_BYTE_MAX_SIZE) {
           return 5;
         } else if (length < 18446744073709551615) {
           return 9;
@@ -67,17 +78,17 @@
         } else { // Transactions with segwit inputs have extra overhead
           var witness_vbytes = 0.25                 // segwit marker
                             + 0.25                  // segwit flag
-                            + input_count / 4;      // witness element count per input
+                            + input_count / SEGWIT_INPUT_DISCOUNT; // witness element count per input
         }
 
         return witness_vbytes;
       }
 
       function getTxOverheadVBytes(input_script, input_count, output_count) {
-        return 4 // nVersion
+        return HEADER_VERSION_SIZE // nVersion
               + getSizeOfVarInt(input_count) // number of inputs
               + getSizeOfVarInt(output_count) // number of outputs
-              + 4 // nLockTime
+              + HEADER_LOCKTIME_SIZE // nLockTime
               + getWitnessVbytes(input_script, input_count);
       }
 
@@ -167,30 +178,31 @@
             break;
           case "P2SH-P2WPKH":
             inputSize = P2SH_P2WPKH_IN_SIZE;
-            inputWitnessSize = 107; // size(signature) + signature + size(pubkey) + pubkey
+            inputWitnessSize = P2WPKH_INPUT_WITNESS_SIZE; // size(signature) + signature + size(pubkey) + pubkey
             break;
           case "P2WPKH":
             inputSize = P2WPKH_IN_SIZE;
-            inputWitnessSize = 107; // size(signature) + signature + size(pubkey) + pubkey
+            inputWitnessSize = P2WPKH_INPUT_WITNESS_SIZE; // size(signature) + signature + size(pubkey) + pubkey
             break;
           case "P2TR": // Only consider the cooperative taproot signing path; assume multisig is done via aggregate signatures
             inputSize = P2TR_IN_SIZE;
-            inputWitnessSize = 65; // getSizeOfVarInt(schnorrSignature) + schnorrSignature;
+            inputWitnessSize = P2TR_INPUT_WITNESS_SIZE; // getSizeOfVarInt(schnorrSignature) + schnorrSignature;
             break;
           case "P2SH":
             var redeemScriptSize = getRedeemScriptSize(input_n);
             var scriptSigSize = getScriptSignatureSize(input_m, redeemScriptSize);
-            inputSize = 32 + 4 + getSizeOfVarInt(scriptSigSize) + scriptSigSize + 4;
+            inputSize = INPUT_TXID_SIZE + INPUT_VOUT_SIZE + getSizeOfVarInt(scriptSigSize) + scriptSigSize + INPUT_SEQUENCE_SIZE;
             break;
           case "P2SH-P2WSH":
           case "P2WSH":
             var redeemScriptSize = getRedeemScriptSize(input_n);
             inputWitnessSize = getScriptSignatureSize(input_m, redeemScriptSize);
-            inputSize = 36 + // outpoint (spent UTXO ID)
-                        inputWitnessSize / 4 + // witness program
-                        4;  // nSequence
+            inputSize = INPUT_TXID_SIZE + // outpoint (spent UTXO ID)
+                        INPUT_VOUT_SIZE +
+                        inputWitnessSize / SEGWIT_INPUT_DISCOUNT + // witness program
+                        INPUT_SEQUENCE_SIZE;  // nSequence
             if (input_script == "P2SH-P2WSH") {
-              inputSize += 32 + 3; // P2SH wrapper (redeemscript hash) + overhead?
+              inputSize += INPUT_TXID_SIZE + 3; // P2SH wrapper (redeemscript hash) + overhead?
             }
         }
       
