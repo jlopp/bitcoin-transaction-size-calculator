@@ -15,12 +15,16 @@
     <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
     <script>
+      const P2PK_IN_SIZE = 114;
+      const P2PK_COMPRESSED_OUT_SIZE = 44;
+      const P2PK_UNCOMPRESSED_OUT_SIZE = 76;
+
       const P2PKH_IN_SIZE = 148;
       const P2PKH_OUT_SIZE = 34;
-      
+
       const P2SH_OUT_SIZE = P2SH_P2WPKH_OUT_SIZE = P2SH_P2WSH_OUT_SIZE = 32;
       
-      // All segwit input sizes are reduced by 1 WU to account for the witness item counts being added for every input per the transaction header
+      // All segwit input sizes are reduced by 1 WU to account for the witness item counts being added for every input per the transaction header
       const P2SH_P2WPKH_IN_SIZE = 90.75;
       
       const P2WPKH_IN_SIZE = 67.75;
@@ -73,7 +77,7 @@
       }
 
       function getWitnessVbytes(input_script, input_count) {
-        if (input_script == "P2PKH" || input_script == "P2SH") {
+        if (input_script == "P2PK" || input_script == "P2PKH" || input_script == "P2SH") {
           var witness_vbytes = 0;
         } else { // Transactions with segwit inputs have extra overhead
           var witness_vbytes = 0.25                 // segwit marker
@@ -128,8 +132,18 @@
           alert('expecting positive pubkey count');
           return;
         }
-      
+
         // Validate transaction output attributes
+        var p2pk_compressed_output_count = parseInt(document.getElementById('p2pk_compressed_output_count').value);
+        if (!Number.isInteger(p2pk_compressed_output_count) || p2pk_compressed_output_count < 0) {
+          alert('expecting positive p2pk compressed output count');
+          return;
+        }
+        var p2pk_uncompressed_output_count = parseInt(document.getElementById('p2pk_uncompressed_output_count').value);
+        if (!Number.isInteger(p2pk_uncompressed_output_count) || p2pk_uncompressed_output_count < 0) {
+          alert('expecting positive p2pk uncompressed output count');
+          return;
+        }
         var p2pkh_output_count = parseInt(document.getElementById('p2pkh_output_count').value);
         if (!Number.isInteger(p2pkh_output_count) || p2pkh_output_count < 0) {
           alert('expecting positive p2pkh output count');
@@ -166,13 +180,17 @@
           return;
         }
 
-        const output_count = p2pkh_output_count + p2sh_output_count + p2sh_p2wpkh_output_count
-                            + p2sh_p2wsh_output_count + p2wpkh_output_count + p2wsh_output_count + p2tr_output_count;
+        const output_count = p2pk_compressed_output_count + p2pk_uncompressed_output_count + p2pkh_output_count
+                            + p2sh_output_count + p2sh_p2wpkh_output_count + p2sh_p2wsh_output_count
+                            + p2wpkh_output_count + p2wsh_output_count + p2tr_output_count;
 
         // In most cases the input size is predictable. For multisig inputs we need to perform a detailed calculation
         var inputSize = 0; // in virtual bytes
         var inputWitnessSize = 0;
         switch (input_script) {
+          case "P2PK":
+            inputSize = P2PK_IN_SIZE;
+            break;
           case "P2PKH":
             inputSize = P2PKH_IN_SIZE;
             break;
@@ -208,6 +226,8 @@
       
         var txVBytes = getTxOverheadVBytes(input_script, input_count, output_count) +
                     inputSize * input_count +
+                    P2PK_COMPRESSED_OUT_SIZE * p2pk_compressed_output_count +
+                    P2PK_UNCOMPRESSED_OUT_SIZE * p2pk_uncompressed_output_count +
                     P2PKH_OUT_SIZE * p2pkh_output_count +
                     P2SH_OUT_SIZE * p2sh_output_count +
                     P2SH_P2WPKH_OUT_SIZE * p2sh_p2wpkh_output_count +
@@ -255,13 +275,14 @@
                 <label for="input_script" class="col-sm-4 col-form-label">Input script type</label>
                 <div class="col-sm-3">
                   <select id="input_script" class="format form-control">
-                    <option value="P2PKH" selected>P2PKH</option>
+                    <option value="P2PK">P2PK</option>
+                    <option value="P2PKH">P2PKH</option>
                     <option value="P2SH">P2SH</option>
                     <option value="P2SH-P2WPKH">P2WPKH in P2SH</option>
                     <option value="P2SH-P2WSH">P2WSH in P2SH</option>
                     <option value="P2WPKH">P2WPKH</option>
                     <option value="P2WSH">P2WSH</option>
-                    <option value="P2TR">P2TR</option>
+                    <option value="P2TR" selected>P2TR</option>
                   </select>
                 </div>
               </div>
@@ -275,6 +296,18 @@
                 <label for="input_n" class="col-sm-4 col-form-label">Pubkeys per input</label>
                 <div class="col-sm-2">
                   <input type="text" id="input_n" class="format form-control" value="1" maxlength="5" size="5" />
+                </div>
+              </div>
+              <div class="form-group row">
+                <label for="p2pk_compressed_output_count" class="col-sm-4 col-form-label">P2PK compressed outputs</label>
+                <div class="col-sm-2">
+                  <input type="text" id="p2pk_compressed_output_count" class="format form-control" value="0" maxlength="5" size="5" />
+                </div>
+              </div>
+              <div class="form-group row">
+                <label for="p2pk_uncompressed_output_count" class="col-sm-4 col-form-label">P2PK uncompressed outputs</label>
+                <div class="col-sm-2">
+                  <input type="text" id="p2pk_uncompressed_output_count" class="format form-control" value="0" maxlength="5" size="5" />
                 </div>
               </div>
               <div class="form-group row">
